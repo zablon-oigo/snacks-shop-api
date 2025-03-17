@@ -1,0 +1,78 @@
+service: snacks-shop-api
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.10
+  region: us-east-1
+  stage: ${opt:stage}
+
+  iam:
+    role:
+      name: SnackShopApiRole-${self:provider.stage}
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: arn:aws:dynamodb:${self:provider.region}:*:table/SnackOrders-${self:provider.stage}
+
+functions:
+  createSnack:
+    handler: create_snacks.lambda_handler
+    environment:
+      SNACKS_ORDERS_TABLE: SnackOrders-${self:provider.stage}
+    events:
+      - http:
+          path: snack
+          method: post
+
+  getSnack:
+    handler: get_snacks.lambda_handler
+    environment:
+      SNACKS_ORDERS_TABLE: SnackOrders-${self:provider.stage}
+    events:
+      - http:
+          path: snack
+          method: get
+
+  updateSnack:
+    handler: update_snacks.lambda_handler
+    environment:
+      SNACKS_ORDERS_TABLE: SnackOrders-${self:provider.stage}
+    events:
+      - http:
+          path: snack
+          method: put
+
+  deleteSnack:
+    handler: delete_snacks.lambda_handler
+    environment:
+      SNACKS_ORDERS_TABLE: SnackOrders-${self:provider.stage}
+    events:
+      - http:
+          path: snack
+          method: delete
+
+resources:
+  Resources:
+    SnackTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: SnackOrders-${self:provider.stage}
+        AttributeDefinitions:
+          - AttributeName: OrderId
+            AttributeType: S
+          - AttributeName: Email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: OrderId
+            KeyType: HASH
+          - AttributeName: Email
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
